@@ -1,36 +1,41 @@
-# desplejar las rutas para cada componentes 
-# Unificando routas con controladores
-from fastapi import APIRouter
-# Importando servicios
-from services.usuario import listar_usuarios, obtener_usuario_x_id
-from common.res import responder_json
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
-rutas = APIRouter()
+app = FastAPI()
 
-url = "/usuario"
+# Configuración de CORS para permitir solicitudes desde el frontend
+origins = ["http://localhost:3000"]  # Reemplaza esto con la URL de tu frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-#Create Read Update Delete
+class Usuario(BaseModel):
+    usuario: str
+    contrasena: str
 
-@rutas.get(url,
-           response_model=[])
-def lista_usuarios():
-    resultado = listar_usuarios()
-    return responder_json(200, "OK", resultado)
+# Variable para simular el estado de inicio de sesión
+sesion_iniciada = False
 
-@rutas.get(url + "/{id}")
-def obtiene_usuario(id:str):
-    usuario = obtener_usuario_x_id(int(id))
-    print(usuario)
-    return responder_json(200, "ok",usuario)
+@app.post("/iniciar_sesion")
+def iniciar_sesion(usuario: Usuario):
+    global sesion_iniciada
 
-@rutas.post(url)
-def registra_usuario(elemento:object):
-    return {}
+    if usuario.usuario == "Admin" and usuario.contrasena == "123":
+        sesion_iniciada = True
+        return {"mensaje": "Inicio de sesión exitoso"}
+    else:
+        raise HTTPException(status_code=401, detail="Error de usuario y/o contraseña")
 
-@rutas.put(url + "/{id}")
-def actualiza_usuario(id:int, elemento:object):
-    return {}
+@app.get("/comprobar_sesion")
+def comprobar_sesion():
+    return {"sesion_iniciada": sesion_iniciada}
 
-@rutas.delete(url + "/{id}")
-def elimina_usuario(id:int):
-    return {}
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(app, host="127.0.0.1", port=8000)
